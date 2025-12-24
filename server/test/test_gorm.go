@@ -1,27 +1,26 @@
 package main
 
 import (
+	"chat/model"
 	"fmt"
-	"ginchat/models"
-	"os"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
 func main() {
-	dbUser := os.Getenv("DB_USER")
-	dbPass := os.Getenv("DB_PASS")
-	dsn := fmt.Sprintf("%s:%s@tcp(localhost:3306)/ginchat?charset=utf8mb4&parseTime=True&loc=Local", dbUser, dbPass)
+	// dbUser := os.Getenv("DB_USER")
+	// dbPass := os.Getenv("DB_PASS")
+	dsn := fmt.Sprintf("%s:%s@tcp(localhost:3306)/chat?charset=utf8mb4&parseTime=True&loc=Local", "root", "root")
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
 	}
 	// Migrate the schema
-	db.AutoMigrate(&models.UserBasic{})
+	db.AutoMigrate(&model.UserBasic{})
 
 	// Create
-	user := &models.UserBasic{}
+	user := &model.UserBasic{}
 	user.Name = "Tony"
 	db.Create(user)
 

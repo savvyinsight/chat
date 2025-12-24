@@ -1,8 +1,6 @@
 package main
 
-import (
-	"ginchat/router"
-)
+import "chat/router"
 
 func main() {
 	r := router.Router()

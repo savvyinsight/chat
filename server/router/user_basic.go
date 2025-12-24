@@ -1,7 +1,7 @@
 package router
 
 import (
-	"ginchat/service"
+	"chat/service"
 
 	"github.com/gin-gonic/gin"
 )
