@@ -1,6 +1,10 @@
 package model
 
-import "gorm.io/gorm"
+import (
+	"chat/global"
+
+	"gorm.io/gorm"
+)
 
 type UserBasic struct {
 	gorm.Model
@@ -20,4 +24,11 @@ type UserBasic struct {
 
 func (table *UserBasic) TableName() string {
 	return "user_basic"
+}
+
+func GetUserList() []*UserBasic {
+	var users []*UserBasic
+	db := global.GVA_DB
+	db.Find(&users)
+	return users
 }

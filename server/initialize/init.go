@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"chat/global"
-	"chat/model"
 
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
@@ -24,8 +23,8 @@ func InitConfig() {
 }
 
 func InitMysql() {
-	global.GVA_DB, _ = gorm.Open(mysql.Open(viper.GetString("Mysql")), &gorm.Config{})
-	user := model.UserBasic{}
-	global.GVA_DB.Find(&user)
-	fmt.Println(user)
+	global.GVA_DB, _ = gorm.Open(mysql.Open(viper.GetString("Mysql.dns")), &gorm.Config{})
+	// user := model.UserBasic{}
+	// global.GVA_DB.Find(&user)
+	// fmt.Println(user)
 }
