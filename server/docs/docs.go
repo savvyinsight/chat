@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/getUserList": {
+        "/GetUserList": {
             "get": {
                 "description": "Retrieves a list of users",
                 "consumes": [
