@@ -13,10 +13,9 @@ import (
 // @Accept       json
 // @Produce      json
 // @Success      200  {object}  map[string]interface{}
-// @Router       /getUserList [get]
+// @Router       /GetUserList [get]
 func GetUserList(c *gin.Context) {
-	data := make([]*model.UserBasic, 10)
-	data = model.GetUserList()
+	data := model.GetUserList()
 	c.JSON(200, gin.H{
 		"message": "User list retrieved successfully",
 		"data":    data,

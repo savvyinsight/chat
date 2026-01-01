@@ -2,6 +2,7 @@ package initialize
 
 import (
 	"fmt"
+	"log"
 
 	"chat/global"
 
@@ -23,6 +24,8 @@ func InitConfig() {
 }
 
 func InitMysql() {
+	log.New(log.Writer(), "\r\n", log.LstdFlags) // io writer
+
 	global.GVA_DB, _ = gorm.Open(mysql.Open(viper.GetString("Mysql.dns")), &gorm.Config{})
 	// user := model.UserBasic{}
 	// global.GVA_DB.Find(&user)
