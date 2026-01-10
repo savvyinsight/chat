@@ -3,12 +3,14 @@ package initialize
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"chat/global"
 
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func InitConfig() {
@@ -24,9 +26,19 @@ func InitConfig() {
 }
 
 func InitMysql() {
-	log.New(log.Writer(), "\r\n", log.LstdFlags) // io writer
+	// customize gorm logger
+	newLogger := logger.New(
+		log.New(log.Writer(), "\r\n", log.LstdFlags), // io writer
+		logger.Config{
+			SlowThreshold: time.Second, //Slow SQL Threshold
+			LogLevel:      logger.Info,
+			Colorful:      true,
+		},
+	)
 
-	global.GVA_DB, _ = gorm.Open(mysql.Open(viper.GetString("Mysql.dns")), &gorm.Config{})
+	global.GVA_DB, _ = gorm.Open(mysql.Open(viper.GetString("Mysql.dns")), &gorm.Config{
+		Logger: newLogger,
+	})
 	// user := model.UserBasic{}
 	// global.GVA_DB.Find(&user)
 	// fmt.Println(user)
