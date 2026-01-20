@@ -1,2 +1,7 @@
 Mysql:
-    dns: root:root@tcp(127.0.0.1:3306)/chat
+    dns: "root:root@tcp(127.0.0.1:3306)/chat?charset=utf8mb4&parseTime=True&loc=Local"
+
+# 必须写必要参数：
+# charset=utf8mb4 - 支持完整的 Unicode 字符（包括中文和表情符号）
+# parseTime=True - 自动将数据库时间类型解析为 Go 的 time.Time
+# loc=Local - 使用时区设置，避免时间转换问题
