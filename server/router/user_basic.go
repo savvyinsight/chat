@@ -20,7 +20,7 @@ func Router() *gin.Engine {
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	r.GET("/index", service.GetIndex)
-	r.GET("/GetUserList", service.GetUserList)
+	r.GET("/userList", service.GetUserList)
 
 	return r
 }
