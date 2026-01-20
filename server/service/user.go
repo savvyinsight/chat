@@ -1,6 +1,7 @@
 package service
 
 import (
+	"chat/global"
 	"chat/model"
 
 	"github.com/gin-gonic/gin"
@@ -13,9 +14,14 @@ import (
 // @Accept       json
 // @Produce      json
 // @Success      200  {object}  map[string]interface{}
-// @Router       /GetUserList [get]
+// @Router       /userList [get]
 func GetUserList(c *gin.Context) {
-	data := model.GetUserList()
+	db := global.GVA_DB.Model(model.UserBasic{})
+
+	var users []model.UserBasic
+	db.Find(&users)
+	// data := model.GetUserList()
+	data := users
 	c.JSON(200, gin.H{
 		"message": "User list retrieved successfully",
 		"data":    data,
