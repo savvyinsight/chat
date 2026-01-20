@@ -1,22 +1,6 @@
 info:
   contact: {}
 paths:
-  /GetUserList:
-    get:
-      consumes:
-      - application/json
-      description: Retrieves a list of users
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Get User List
-      tags:
-      - User
   /index:
     get:
       consumes:
@@ -34,4 +18,20 @@ paths:
       summary: Index Endpoint
       tags:
       - Index
+  /userList:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a list of users
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get User List
+      tags:
+      - User
 swagger: "2.0"
