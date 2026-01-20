@@ -3,27 +3,30 @@ package service
 import (
 	"chat/global"
 	"chat/model"
-
-	"github.com/gin-gonic/gin"
+	"fmt"
 )
 
-// GetUserList godoc
-// @Summary      Get User List
-// @Description  Retrieves a list of users
-// @Tags         User
-// @Accept       json
-// @Produce      json
-// @Success      200  {object}  map[string]interface{}
-// @Router       /userList [get]
-func GetUserList(c *gin.Context) {
+func GetUserList() (users []model.UserBasic) {
 	db := global.GVA_DB.Model(model.UserBasic{})
-
-	var users []model.UserBasic
 	db.Find(&users)
-	// data := model.GetUserList()
-	data := users
-	c.JSON(200, gin.H{
-		"message": "User list retrieved successfully",
-		"data":    data,
-	})
+	return
+}
+
+func CreateUser(user *model.UserBasic) (err error) {
+	err = global.GVA_DB.Create(user).Error
+	return
+}
+
+func DeleteUser(user *model.UserBasic) (err error) {
+	result := global.GVA_DB.Delete(user)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	// Check actual delete row counts
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
 }

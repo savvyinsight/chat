@@ -1,8 +1,8 @@
 package router
 
 import (
+	"chat/api"
 	"chat/docs"
-	"chat/service"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -19,8 +19,10 @@ func Router() *gin.Engine {
 	docs.SwaggerInfo.Schemes = []string{"http", "https"}
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	r.GET("/index", service.GetIndex)
-	r.GET("/userList", service.GetUserList)
+	r.GET("/index", api.GetIndex)
+	r.GET("/userList", api.GetUserList)
+	r.GET("/user/createUser", api.CreateUser)
+	r.DELETE("/user/:id", api.DeleteUser)
 
 	return r
 }
