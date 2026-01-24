@@ -1,12 +1,15 @@
 package api
 
 import (
+	"chat/global"
 	"chat/model"
 	"chat/service"
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // GetUserList godoc
@@ -113,6 +116,135 @@ func DeleteUser(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Delete User Succeeded!",
+		"user_id": id,
+	})
+}
+
+// Update User
+// @Summary      Update User
+// @Tags         User
+// @Accept       json
+// @Produce      json
+// @Param id path int true "User ID"
+// @Param request body model.UserBasic true "Update User Request"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Router       /user/{id} [put]
+func UpdateUser(c *gin.Context) {
+	// 1. 获取用户ID
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Invalid user ID",
+			"error":   "INVALID_ID",
+		})
+		return
+	}
+
+	// 2. 先检查用户是否存在
+	var existingUser model.UserBasic
+	result := global.GVA_DB.First(&existingUser, id)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{
+				"message": "User not found",
+				"error":   "USER_NOT_FOUND",
+			})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Failed to query user",
+				"error":   result.Error.Error(),
+			})
+		}
+		return
+	}
+
+	// 3. 绑定更新数据
+	var updateData model.UserBasic
+	if err := c.ShouldBindJSON(&updateData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Invalid request data",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// 4. 设置要更新的字段（避免更新ID）
+	updateData.ID = uint(id)
+
+	// 5. 调用Service层更新
+	err = service.UpdateUser(&updateData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Update User Failed!",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Update User Succeeded!",
+		"user_id": id,
+	})
+}
+
+// PartialUpdateUser 部分更新用户信息
+// @Summary      Partial Update User
+// @Tags         User
+// @Accept       json
+// @Produce      json
+// @Param id path int true "User ID"
+// @Param request body map[string]interface{} true "Update Fields"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /user/{id} [patch]
+func PartialUpdateUser(c *gin.Context) {
+	// 1. 获取用户ID
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Invalid user ID",
+		})
+		return
+	}
+
+	// 2. 解析更新字段
+	var updateFields map[string]interface{}
+	if err := c.ShouldBindJSON(&updateFields); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Invalid JSON data",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// 3. 移除不允许更新的字段（如ID）
+	delete(updateFields, "id")
+	delete(updateFields, "ID")
+	delete(updateFields, "created_at")
+	delete(updateFields, "CreatedAt")
+
+	if len(updateFields) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "No fields to update",
+		})
+		return
+	}
+
+	// 4. 调用Service层更新
+	err = service.UpdateUserPartial(uint(id), updateFields)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Update User Failed!",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Update User Succeeded!",
 		"user_id": id,
 	})
 }

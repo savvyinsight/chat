@@ -23,6 +23,8 @@ func Router() *gin.Engine {
 	r.GET("/userList", api.GetUserList)
 	r.GET("/user/createUser", api.CreateUser)
 	r.DELETE("/user/:id", api.DeleteUser)
+	r.PUT("/user/:id", api.UpdateUser)
+	r.PATCH("/user/:id", api.PartialUpdateUser)
 
 	return r
 }

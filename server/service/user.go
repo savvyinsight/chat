@@ -3,7 +3,10 @@ package service
 import (
 	"chat/global"
 	"chat/model"
+	"errors"
 	"fmt"
+
+	"gorm.io/gorm"
 )
 
 func GetUserList() (users []model.UserBasic) {
@@ -26,6 +29,45 @@ func DeleteUser(user *model.UserBasic) (err error) {
 	// Check actual delete row counts
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("user not found")
+	}
+
+	return nil
+}
+
+func UpdateUser(user *model.UserBasic) error {
+	result := global.GVA_DB.Model(&model.UserBasic{}).
+		Where("id = ?", user.ID).
+		Updates(user)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("user with ID %d not found", user.ID)
+	}
+
+	return nil
+}
+
+func UpdateUserPartial(userID uint, updateFields map[string]interface{}) error {
+	// 1. 先检查用户是否存在
+	var existingUser model.UserBasic
+	result := global.GVA_DB.First(&existingUser, userID)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("user not found")
+		}
+		return result.Error
+	}
+
+	// 2. 执行更新
+	updateResult := global.GVA_DB.Model(&model.UserBasic{}).
+		Where("id = ?", userID).
+		Updates(updateFields)
+
+	if updateResult.Error != nil {
+		return updateResult.Error
 	}
 
 	return nil
