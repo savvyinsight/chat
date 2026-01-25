@@ -174,7 +174,16 @@ func UpdateUser(c *gin.Context) {
 	// 4. 设置要更新的字段（避免更新ID）
 	updateData.ID = uint(id)
 
-	// 5. 调用Service层更新
+	// 5. Validate fields (email/phone)
+	if err := updateData.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Validation failed",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// 6. 调用Service层更新
 	err = service.UpdateUser(&updateData)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

@@ -16,6 +16,10 @@ func GetUserList() (users []model.UserBasic) {
 }
 
 func CreateUser(user *model.UserBasic) (err error) {
+	if err = user.Validate(); err != nil {
+		return err
+	}
+
 	err = global.GVA_DB.Create(user).Error
 	return
 }
@@ -35,6 +39,10 @@ func DeleteUser(user *model.UserBasic) (err error) {
 }
 
 func UpdateUser(user *model.UserBasic) error {
+	if err := user.Validate(); err != nil {
+		return err
+	}
+
 	result := global.GVA_DB.Model(&model.UserBasic{}).
 		Where("id = ?", user.ID).
 		Updates(user)
@@ -62,6 +70,30 @@ func UpdateUserPartial(userID uint, updateFields map[string]interface{}) error {
 	}
 
 	// 2. 执行更新
+	// Validate email/phone if present in updateFields
+	if emailVal, ok := updateFields["email"]; ok {
+		if emailStr, ok2 := emailVal.(string); ok2 {
+			temp := existingUser
+			temp.Email = emailStr
+			if err := temp.Validate(); err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("invalid email format")
+		}
+	}
+	if phoneVal, ok := updateFields["phone"]; ok {
+		if phoneStr, ok2 := phoneVal.(string); ok2 {
+			temp := existingUser
+			temp.Phone = phoneStr
+			if err := temp.Validate(); err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("invalid phone format")
+		}
+	}
+
 	updateResult := global.GVA_DB.Model(&model.UserBasic{}).
 		Where("id = ?", userID).
 		Updates(updateFields)
