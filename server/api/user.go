@@ -40,6 +40,8 @@ func GetUserList(c *gin.Context) {
 func CreateUser(c *gin.Context) {
 	user := model.UserBasic{}
 	user.Name = c.Query("name")
+	user.Email = c.Query("email")
+	user.Phone = c.Query("phone")
 	password := c.Query("password")
 	repassword := c.Query("repassword")
 	if password != repassword {
@@ -59,6 +61,14 @@ func CreateUser(c *gin.Context) {
 	}
 
 	user.PassWord = password
+
+	if user.Email == "" && user.Phone == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Email or phone required",
+			"error":   "MISSING_IDENTIFIER",
+		})
+		return
+	}
 
 	err := service.CreateUser(&user)
 	if err != nil {

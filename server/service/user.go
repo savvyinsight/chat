@@ -11,7 +11,6 @@ import (
 	"gorm.io/gorm"
 )
 
-
 func GetUserList() (users []model.UserBasic) {
 	db := global.GVA_DB.Model(model.UserBasic{})
 	db.Find(&users)
@@ -20,6 +19,11 @@ func GetUserList() (users []model.UserBasic) {
 
 func CreateUser(user *model.UserBasic) (err error) {
 	db := global.GVA_DB
+
+	// require at least one identifier so user can authenticate
+	if user.Email == "" && user.Phone == "" {
+		return fmt.Errorf("email or phone required")
+	}
 
 	var existing model.UserBasic
 	if user.Email != "" {
