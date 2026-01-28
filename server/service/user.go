@@ -16,11 +16,30 @@ func GetUserList() (users []model.UserBasic) {
 }
 
 func CreateUser(user *model.UserBasic) (err error) {
+	db := global.GVA_DB
+
+	var existing model.UserBasic
+	if user.Email != "" {
+		if err := db.Where("email = ?", user.Email).First(&existing).Error; err == nil {
+			return fmt.Errorf("email already registered")
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+	}
+
+	if user.Phone != "" {
+		if err := db.Where("phone = ?", user.Phone).First(&existing).Error; err == nil {
+			return fmt.Errorf("phone already registered")
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+	}
+
 	if err = user.Validate(); err != nil {
 		return err
 	}
 
-	err = global.GVA_DB.Create(user).Error
+	err = db.Create(user).Error
 	return
 }
 
@@ -41,6 +60,23 @@ func DeleteUser(user *model.UserBasic) (err error) {
 func UpdateUser(user *model.UserBasic) error {
 	if err := user.Validate(); err != nil {
 		return err
+	}
+
+	// check duplicates for email/phone
+	var conflict model.UserBasic
+	if user.Email != "" {
+		if err := global.GVA_DB.Where("email = ? AND id <> ?", user.Email, user.ID).First(&conflict).Error; err == nil {
+			return fmt.Errorf("email already registered")
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+	}
+	if user.Phone != "" {
+		if err := global.GVA_DB.Where("phone = ? AND id <> ?", user.Phone, user.ID).First(&conflict).Error; err == nil {
+			return fmt.Errorf("phone already registered")
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
 	}
 
 	result := global.GVA_DB.Model(&model.UserBasic{}).
@@ -91,6 +127,28 @@ func UpdateUserPartial(userID uint, updateFields map[string]interface{}) error {
 			}
 		} else {
 			return fmt.Errorf("invalid phone format")
+		}
+	}
+
+	// check for duplicates when updating fields
+	if emailVal, ok := updateFields["email"]; ok {
+		if emailStr, ok2 := emailVal.(string); ok2 {
+			var conflict model.UserBasic
+			if err := global.GVA_DB.Where("email = ? AND id <> ?", emailStr, userID).First(&conflict).Error; err == nil {
+				return fmt.Errorf("email already registered")
+			} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return err
+			}
+		}
+	}
+	if phoneVal, ok := updateFields["phone"]; ok {
+		if phoneStr, ok2 := phoneVal.(string); ok2 {
+			var conflict model.UserBasic
+			if err := global.GVA_DB.Where("phone = ? AND id <> ?", phoneStr, userID).First(&conflict).Error; err == nil {
+				return fmt.Errorf("phone already registered")
+			} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return err
+			}
 		}
 	}
 

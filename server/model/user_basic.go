@@ -14,8 +14,8 @@ type UserBasic struct {
 	gorm.Model
 	Name          string
 	PassWord      string
-	Phone         string `valid:"phone"`
-	Email         string `valid:"email"`
+	Phone         string `gorm:"uniqueIndex" valid:"phone"`
+	Email         string `gorm:"uniqueIndex" valid:"email"`
 	Identity      string
 	ClientIp      string
 	ClientPort    string
