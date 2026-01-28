@@ -257,3 +257,30 @@ func PartialUpdateUser(c *gin.Context) {
 		"user_id": id,
 	})
 }
+
+// Login user
+// @Summary Login
+// @Accept json
+// @Produce json
+// @Param request body map[string]string true "Login request {identifier, password}"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Router /user/login [post]
+func Login(c *gin.Context) {
+	var req struct {
+		Identifier string `json:"identifier"`
+		Password   string `json:"password"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request", "error": err.Error()})
+		return
+	}
+
+	user, err := service.AuthenticateUser(req.Identifier, req.Password)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "Authentication failed", "error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Login succeeded", "user_id": user.ID})
+}

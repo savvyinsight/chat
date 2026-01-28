@@ -25,6 +25,7 @@ func Router() *gin.Engine {
 	r.DELETE("/user/:id", api.DeleteUser)
 	r.PUT("/user/:id", api.UpdateUser)
 	r.PATCH("/user/:id", api.PartialUpdateUser)
+	r.POST("/user/login", api.Login)
 
 	return r
 }

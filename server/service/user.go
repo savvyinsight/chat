@@ -11,6 +11,7 @@ import (
 	"gorm.io/gorm"
 )
 
+
 func GetUserList() (users []model.UserBasic) {
 	db := global.GVA_DB.Model(model.UserBasic{})
 	db.Find(&users)
@@ -212,4 +213,36 @@ func UpdateUserPartial(userID uint, updateFields map[string]interface{}) error {
 	}
 
 	return nil
+}
+
+// AuthenticateUser finds a user by email or phone and verifies the password.
+// identifier may be an email or phone number.
+func AuthenticateUser(identifier, password string) (*model.UserBasic, error) {
+	var user model.UserBasic
+	db := global.GVA_DB
+
+	if identifier == "" || password == "" {
+		return nil, fmt.Errorf("identifier and password required")
+	}
+
+	// try email first
+	if err := db.Where("email = ?", identifier).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// try phone
+			if err2 := db.Where("phone = ?", identifier).First(&user).Error; err2 != nil {
+				if errors.Is(err2, gorm.ErrRecordNotFound) {
+					return nil, fmt.Errorf("user not found")
+				}
+				return nil, err2
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PassWord), []byte(password)); err != nil {
+		return nil, fmt.Errorf("invalid credentials")
+	}
+
+	return &user, nil
 }
