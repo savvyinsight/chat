@@ -33,6 +33,8 @@ func GetUserList(c *gin.Context) {
 // @Description  Create user
 // @Tags         User
 // @Param name query string false "User Name"
+// @Param email query string false "User Email"
+// @Param phone query string false "User Phone"
 // @Param password query string false "Password"
 // @Param repassword query string false "Confirm Password"
 // @Success      200  {string}  json{"code","message"}

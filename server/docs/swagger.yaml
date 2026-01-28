@@ -140,6 +140,33 @@ paths:
       summary: Create User
       tags:
       - User
+  /user/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Login request {identifier, password}
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Login
   /userList:
     get:
       consumes:
