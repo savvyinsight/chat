@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"gorm.io/gorm"
 )
 
@@ -35,6 +37,15 @@ func CreateUser(user *model.UserBasic) (err error) {
 		}
 	}
 
+	// hash password before storing
+	if user.PassWord != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(user.PassWord), bcrypt.DefaultCost)
+		if err != nil {
+			return err
+		}
+		user.PassWord = string(hash)
+	}
+
 	if err = user.Validate(); err != nil {
 		return err
 	}
@@ -60,6 +71,15 @@ func DeleteUser(user *model.UserBasic) (err error) {
 func UpdateUser(user *model.UserBasic) error {
 	if err := user.Validate(); err != nil {
 		return err
+	}
+
+	// hash password if provided
+	if user.PassWord != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(user.PassWord), bcrypt.DefaultCost)
+		if err != nil {
+			return err
+		}
+		user.PassWord = string(hash)
 	}
 
 	// check duplicates for email/phone
@@ -106,6 +126,37 @@ func UpdateUserPartial(userID uint, updateFields map[string]interface{}) error {
 	}
 
 	// 2. 执行更新
+	// Handle password hashing if present in updateFields
+	// Accept common JSON keys: "password", "PassWord", and normalize to DB column "pass_word"
+	if pwVal, ok := updateFields["password"]; ok {
+		if pwStr, ok2 := pwVal.(string); ok2 {
+			if pwStr != "" {
+				hash, err := bcrypt.GenerateFromPassword([]byte(pwStr), bcrypt.DefaultCost)
+				if err != nil {
+					return err
+				}
+				updateFields["pass_word"] = string(hash)
+			}
+		} else {
+			return fmt.Errorf("invalid password format")
+		}
+		delete(updateFields, "password")
+	}
+	if pwVal, ok := updateFields["PassWord"]; ok {
+		if pwStr, ok2 := pwVal.(string); ok2 {
+			if pwStr != "" {
+				hash, err := bcrypt.GenerateFromPassword([]byte(pwStr), bcrypt.DefaultCost)
+				if err != nil {
+					return err
+				}
+				updateFields["pass_word"] = string(hash)
+			}
+		} else {
+			return fmt.Errorf("invalid password format")
+		}
+		delete(updateFields, "PassWord")
+	}
+
 	// Validate email/phone if present in updateFields
 	if emailVal, ok := updateFields["email"]; ok {
 		if emailStr, ok2 := emailVal.(string); ok2 {
