@@ -3,6 +3,7 @@ package router
 import (
 	"chat/api"
 	"chat/docs"
+	"chat/middleware"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -22,10 +23,17 @@ func Router() *gin.Engine {
 	r.GET("/index", api.GetIndex)
 	r.GET("/userList", api.GetUserList)
 	r.GET("/user/createUser", api.CreateUser)
-	r.DELETE("/user/:id", api.DeleteUser)
-	r.PUT("/user/:id", api.UpdateUser)
-	r.PATCH("/user/:id", api.PartialUpdateUser)
-	r.POST("/user/login", api.Login)
+
+	// JWT middleware and auth routes
+	authMiddleware := middleware.JWTMiddleware()
+	r.POST("/user/login", authMiddleware.LoginHandler)
+
+	// protected routes
+	auth := r.Group("/")
+	auth.Use(authMiddleware.MiddlewareFunc())
+	auth.DELETE("/user/:id", api.DeleteUser)
+	auth.PUT("/user/:id", api.UpdateUser)
+	auth.PATCH("/user/:id", api.PartialUpdateUser)
 
 	return r
 }
