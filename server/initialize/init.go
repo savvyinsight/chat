@@ -1,12 +1,14 @@
 package initialize
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
 
 	"chat/global"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -42,4 +44,30 @@ func InitMysql() {
 	// user := model.UserBasic{}
 	// global.GVA_DB.Find(&user)
 	// fmt.Println(user)
+}
+
+func InitRedis() {
+	addr := viper.GetString("Redis.Addr")
+	if addr == "" {
+		addr = "127.0.0.1:6379"
+	}
+	pwd := viper.GetString("Redis.Password")
+	db := viper.GetInt("Redis.DB")
+
+	client := redis.NewClient(&redis.Options{
+		Addr:     addr,
+		Password: pwd,
+		DB:       db,
+	})
+
+	ctx := context.Background()
+	if err := client.Ping(ctx).Err(); err != nil {
+		log.Printf("redis ping failed: %v", err)
+	} else {
+		log.Printf("redis connected: %s", addr)
+	}
+
+	global.GVA_REDIS = client
+	// store context as global.GVA_CTX already set in global package
+	_ = ctx
 }
