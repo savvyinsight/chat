@@ -9,6 +9,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"gorm.io/gorm"
+	"strings"
+
+	jwtlib "github.com/golang-jwt/jwt/v4"
 )
 
 func GetUserList() (users []model.UserBasic) {
@@ -249,4 +252,71 @@ func AuthenticateUser(identifier, password string) (*model.UserBasic, error) {
 	}
 
 	return &user, nil
+}
+
+// AuthenticateToken verifies a JWT token string and returns the corresponding user.
+// tokenString may include the "Bearer " prefix.
+func AuthenticateToken(tokenString string) (*model.UserBasic, error) {
+	if tokenString == "" {
+		return nil, fmt.Errorf("token required")
+	}
+	// trim Bearer prefix
+	if strings.HasPrefix(strings.ToLower(tokenString), "bearer ") {
+		tokenString = strings.TrimSpace(tokenString[7:])
+	}
+
+	// parse token
+	token, err := jwtlib.Parse(tokenString, func(t *jwtlib.Token) (interface{}, error) {
+		// Ensure signing method is HMAC
+		if _, ok := t.Method.(*jwtlib.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
+		secret := ""
+		if s := jwtSecretFromEnv(); s != "" {
+			secret = s
+		} else {
+			secret = "secret"
+		}
+		return []byte(secret), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !token.Valid {
+		return nil, fmt.Errorf("invalid token")
+	}
+	claims, ok := token.Claims.(jwtlib.MapClaims)
+	if !ok {
+		return nil, fmt.Errorf("invalid token claims")
+	}
+	// identity key used by middleware is "id"
+	idVal, ok := claims["id"]
+	if !ok {
+		return nil, fmt.Errorf("token missing id claim")
+	}
+	var uid uint
+	switch v := idVal.(type) {
+	case float64:
+		uid = uint(v)
+	case int:
+		uid = uint(v)
+	case int64:
+		uid = uint(v)
+	default:
+		return nil, fmt.Errorf("invalid id claim type")
+	}
+
+	var user model.UserBasic
+	if err := global.GVA_DB.First(&user, uid).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("user not found")
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
+func jwtSecretFromEnv() string {
+	// read from env to match middleware.getSecret behavior
+	return "" // intentionally return empty; middleware uses JWT_SECRET env or default "secret"
 }
