@@ -4,6 +4,9 @@ import (
     "log"
     "time"
 
+    "chat/service"
+    "chat/model"
+
     "github.com/gorilla/websocket"
 )
 
@@ -23,6 +26,7 @@ type Message struct {
     Type string `json:"type"`
     From uint   `json:"from"`
     To   uint   `json:"to,omitempty"`
+    ID   uint   `json:"id,omitempty"`
     Body string `json:"body"`
 }
 
@@ -67,6 +71,30 @@ func (c *Client) ReadPump() {
         }
         // set sender
         msg.From = c.userID
+
+        // handle ack messages
+        if msg.Type == "ack" && msg.ID != 0 {
+            // mark message delivered
+            if err := service.AckMessage(msg.ID); err != nil {
+                log.Printf("ack update failed: %v", err)
+            }
+            continue
+        }
+
+        // persist message to DB
+        mm := &model.Message{
+            From: msg.From,
+            To:   msg.To,
+            Type: msg.Type,
+            Body: msg.Body,
+        }
+        if err := service.SaveMessage(mm); err != nil {
+            log.Printf("save message failed: %v", err)
+        } else {
+            // set generated ID so receivers can ack
+            msg.ID = mm.ID
+        }
+
         c.hub.broadcast <- &msg
     }
 }
