@@ -8,8 +8,9 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"gorm.io/gorm"
 	"strings"
+
+	"gorm.io/gorm"
 
 	jwtlib "github.com/golang-jwt/jwt/v4"
 )

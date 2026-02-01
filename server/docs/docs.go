@@ -57,6 +57,18 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "description": "User Email",
+                        "name": "email",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "User Phone",
+                        "name": "phone",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "Password",
                         "name": "password",
                         "in": "query"

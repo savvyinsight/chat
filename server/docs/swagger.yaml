@@ -124,6 +124,14 @@ paths:
         in: query
         name: name
         type: string
+      - description: User Email
+        in: query
+        name: email
+        type: string
+      - description: User Phone
+        in: query
+        name: phone
+        type: string
       - description: Password
         in: query
         name: password

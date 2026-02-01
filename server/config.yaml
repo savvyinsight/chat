@@ -5,3 +5,12 @@ Mysql:
 # charset=utf8mb4 - 支持完整的 Unicode 字符（包括中文和表情符号）
 # parseTime=True - 自动将数据库时间类型解析为 Go 的 time.Time
 # loc=Local - 使用时区设置，避免时间转换问题
+
+Redis:
+    Addr: 47.94.43.108:6379
+    Username: ""
+    Password: "123ab"
+    DB: 0
+    PoolSize: 30
+    MinIdleConns: 10
+    MaxConnAge: 300

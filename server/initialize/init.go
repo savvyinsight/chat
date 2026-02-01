@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"chat/global"
+	"chat/model"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/spf13/viper"
@@ -41,6 +42,7 @@ func InitMysql() {
 	global.GVA_DB, _ = gorm.Open(mysql.Open(viper.GetString("Mysql.dns")), &gorm.Config{
 		Logger: newLogger,
 	})
+	global.GVA_DB.AutoMigrate(&model.Message{})
 	// user := model.UserBasic{}
 	// global.GVA_DB.Find(&user)
 	// fmt.Println(user)

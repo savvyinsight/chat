@@ -4,6 +4,7 @@ import (
 	"chat/api"
 	"chat/docs"
 	"chat/middleware"
+	"chat/ws"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -23,6 +24,7 @@ func Router() *gin.Engine {
 	r.GET("/index", api.GetIndex)
 	r.GET("/userList", api.GetUserList)
 	r.GET("/user/createUser", api.CreateUser)
+	r.GET("/ws", func(c *gin.Context) { ws.ServeWS(c.Writer, c.Request) })
 
 	// JWT middleware and auth routes
 	authMiddleware := middleware.JWTMiddleware()
