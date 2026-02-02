@@ -2,10 +2,13 @@ package ws
 
 import (
 	"chat/global"
+	"chat/service"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -81,13 +84,44 @@ func (h *Hub) Run() {
 			go h.publishToRedis(m)
 			if m.To != 0 {
 				// targeted to a user
+				deliveredLocal := false
 				if set, ok := h.users[m.To]; ok {
 					for c := range set {
 						select {
 						case c.send <- m:
+							deliveredLocal = true
 						default:
 							close(c.send)
 							delete(h.clients, c)
+						}
+					}
+				}
+				if deliveredLocal {
+					// mark message delivered and notify sender
+					if m.ID != 0 {
+						go func(id uint) {
+							if err := service.AckMessage(id); err != nil {
+								log.Printf("AckMessage error: %v", err)
+							}
+						}(m.ID)
+					}
+					// send ack to sender local clients
+					ack := &Message{Type: "ack", ID: m.ID}
+					if set, ok := h.users[m.From]; ok {
+						for c := range set {
+							select {
+							case c.send <- ack:
+							default:
+								close(c.send)
+								delete(h.clients, c)
+							}
+						}
+					}
+					// publish ack to sender channel so other instances can update
+					if m.From != 0 && global.GVA_REDIS != nil {
+						b, _ := json.Marshal(ack)
+						if err := global.GVA_REDIS.Publish(context.Background(), fmt.Sprintf("user:%d", m.From), string(b)).Err(); err != nil {
+							log.Printf("redis publish ack error: %v", err)
 						}
 					}
 				}
@@ -141,25 +175,65 @@ func (h *Hub) ensureSub(channel string) {
 					continue
 				}
 				// deliver to local clients for target user
-				if m.To != 0 {
-					if set, ok := h.users[m.To]; ok {
-						for c := range set {
+				if strings.HasPrefix(msg.Channel, "user:") && m.Type == "ack" {
+					// channel owner id
+					parts := strings.Split(msg.Channel, ":")
+					if len(parts) == 2 {
+						if uid, err := strconv.ParseUint(parts[1], 10, 64); err == nil {
+							owner := uint(uid)
+							// mark ack in DB
+							if m.ID != 0 {
+								if err := service.AckMessage(m.ID); err != nil {
+									log.Printf("AckMessage error from redis ack: %v", err)
+								}
+							}
+							// deliver ack to local owner clients
+							if set, ok := h.users[owner]; ok {
+								for c := range set {
+									select {
+									case c.send <- &m:
+									default:
+										close(c.send)
+										delete(h.clients, c)
+									}
+								}
+							}
+						}
+					}
+				} else {
+					// deliver to local clients for target user
+					if m.To != 0 {
+						if set, ok := h.users[m.To]; ok {
+							deliveredLocal := false
+							for c := range set {
+								select {
+								case c.send <- &m:
+									deliveredLocal = true
+								default:
+									close(c.send)
+									delete(h.clients, c)
+								}
+							}
+							if deliveredLocal {
+								// notify sender via redis ack so origin marks delivered
+								if m.ID != 0 && m.From != 0 && global.GVA_REDIS != nil {
+									ack := &Message{Type: "ack", ID: m.ID}
+									b, _ := json.Marshal(ack)
+									if err := global.GVA_REDIS.Publish(context.Background(), fmt.Sprintf("user:%d", m.From), string(b)).Err(); err != nil {
+										log.Printf("redis publish ack error: %v", err)
+									}
+								}
+							}
+						}
+					} else {
+						// global broadcast
+						for c := range h.clients {
 							select {
 							case c.send <- &m:
 							default:
 								close(c.send)
 								delete(h.clients, c)
 							}
-						}
-					}
-				} else {
-					// global broadcast
-					for c := range h.clients {
-						select {
-						case c.send <- &m:
-						default:
-							close(c.send)
-							delete(h.clients, c)
 						}
 					}
 				}
