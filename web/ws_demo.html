@@ -11,8 +11,13 @@
   <label>User ID (dev fallback): <input id="user" style="width:80px"/></label><br/>
   <button id="connect">Connect</button>
   <button id="disconnect">Disconnect</button>
+  <button id="clear">Clear Log</button>
   <div>
-    <textarea id="log" rows="10" cols="80" readonly></textarea>
+    <textarea id="log" rows="12" cols="80" readonly></textarea>
+  </div>
+  <div>
+    <label>To (user id): <input id="to" style="width:80px"/></label>
+    <label>Type: <select id="type"><option value="message">message</option><option value="room">room</option></select></label>
   </div>
   <div>
     <input id="msg" style="width:400px"/>
@@ -20,7 +25,9 @@
   </div>
   <script>
     let ws;
-    const log = (s) => { document.getElementById('log').value += s + '\n'; };
+    const sentMap = {};
+    const logEl = document.getElementById('log');
+    const log = (s) => { logEl.value += s + '\n'; logEl.scrollTop = logEl.scrollHeight; };
     document.getElementById('connect').onclick = () => {
       let url = document.getElementById('url').value;
       const token = document.getElementById('token').value.trim();
@@ -32,17 +39,54 @@
       }
       ws = new WebSocket(url);
       ws.onopen = () => log('connected');
-      ws.onmessage = (ev) => log('recv: ' + ev.data);
+      ws.onmessage = (ev) => {
+        try {
+          const msg = JSON.parse(ev.data);
+          if (msg.type === 'ack') {
+            log('ACK received for message id=' + msg.id);
+            if (msg.id && sentMap[msg.id]) {
+              sentMap[msg.id].acked = true;
+              log('Message marked acked (was sent): ' + JSON.stringify(sentMap[msg.id]));
+            }
+          } else {
+            log('recv [' + (msg.type||'message') + '] id=' + (msg.id||'') + ' from=' + (msg.from||'') + ' to=' + (msg.to||'') + ' body=' + (msg.body||''));
+            // if this is an echo of our sent message, associate id
+            // try to match by body and from
+            for (const k in sentMap) {
+              const s = sentMap[k];
+              if (!s.id && s.body === msg.body && s.to == msg.to) {
+                s.id = msg.id;
+                log('Associated sent message with id=' + msg.id);
+                break;
+              }
+            }
+          }
+        } catch (e) {
+          log('recv (raw): ' + ev.data);
+        }
+      };
       ws.onclose = () => log('closed');
       ws.onerror = (e) => log('error: ' + e);
     };
     document.getElementById('disconnect').onclick = () => { if (ws) ws.close(); };
+    document.getElementById('clear').onclick = () => { logEl.value = ''; };
     document.getElementById('send').onclick = () => {
-      const m = document.getElementById('msg').value;
+      const body = document.getElementById('msg').value;
+      const toVal = document.getElementById('to').value.trim();
+      const typeVal = document.getElementById('type').value;
       if (!ws) { log('not connected'); return; }
-      const payload = {type:'message', body: m};
+      const payload = {type: typeVal, body: body};
+      if (toVal !== '') {
+        const toNum = parseInt(toVal, 10);
+        if (!isNaN(toNum)) payload.to = toNum;
+      }
       ws.send(JSON.stringify(payload));
-      log('sent: ' + JSON.stringify(payload));
+      const stamp = Date.now();
+      const local = {body: body, to: payload.to, type: payload.type, ts: stamp};
+      // store local message to map until server assigns id
+      const localKey = 'local-' + stamp + '-' + Math.random().toString(36).slice(2,8);
+      sentMap[localKey] = local;
+      log('sent: ' + JSON.stringify(payload) + ' (localKey=' + localKey + ')');
     };
   </script>
 </body>
