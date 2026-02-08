@@ -2,8 +2,8 @@ package api
 
 import (
 	"chat/global"
-	"chat/model"
 	"chat/middleware"
+	"chat/model"
 	"chat/service"
 	"errors"
 	"net/http"
