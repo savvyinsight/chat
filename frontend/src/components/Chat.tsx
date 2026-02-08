@@ -7,7 +7,9 @@ export default function Chat({ token, userId, onLogout }: { token?: string | nul
   const [selectedUser, setSelectedUser] = useState<number | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
-  const wsRef = useRef<WebSocket | null>(null)
+  const wsRef = useRef<any | null>(null)
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
+  const seenRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     api.get('/userList').then((b) => setUsers(b.data || [])).catch(() => setUsers([]))
@@ -18,25 +20,56 @@ export default function Chat({ token, userId, onLogout }: { token?: string | nul
     if (!selectedUser) return
     // user id is derived from token on the server; frontend only needs to supply `with`
     api.get(`/messages?with=${selectedUser}`).then((b) => {
-      const msgs = b.data || []
+      const msgs: Message[] = b.data || []
+      // reset seen keys and messages
+      const s = new Set<string>()
+      msgs.forEach((m) => {
+        const key = m.id ? `id:${m.id}` : `msg:${m.from}:${m.to}:${m.body}`
+        s.add(key)
+      })
+      seenRef.current = s
       setMessages(msgs)
     }).catch(() => {})
   }, [selectedUser])
 
   useEffect(() => {
+    setConnectionStatus('connecting')
     const ws = createSocket({ token: token || undefined, userId: userId })
     wsRef.current = ws
-    ws.onopen = () => console.log('ws open')
-    ws.onmessage = (ev) => {
+    ws.onopen = () => {
+      setConnectionStatus('connected')
+      console.log('ws open')
+    }
+    ws.onmessage = (ev: MessageEvent) => {
       try {
         const m: Message = JSON.parse(ev.data)
-        setMessages((prev) => [...prev, m])
+        // dedupe logic
+        const key = m.id ? `id:${m.id}` : `msg:${m.from}:${m.to}:${m.body}`
+        setMessages((prev) => {
+          // if message has id, remove any optimistic (no-id) duplicate
+          if (m.id) {
+            const filtered = prev.filter((pm) => !(pm.from === m.from && pm.to === m.to && pm.body === m.body && !pm.id))
+            // check if we've already seen this id
+            if (seenRef.current.has(key)) return filtered
+            seenRef.current.add(key)
+            return [...filtered, m]
+          }
+          // no id: skip if seen by key
+          if (seenRef.current.has(key)) return prev
+          seenRef.current.add(key)
+          return [...prev, m]
+        })
       } catch (e) {
         console.warn('invalid message', e)
       }
     }
-    ws.onclose = () => console.log('ws closed')
-    ws.onerror = (e) => console.error('ws error', e)
+    ws.onclose = () => {
+      setConnectionStatus('disconnected')
+      console.log('ws closed')
+    }
+    ws.onerror = (e: any) => {
+      console.error('ws error', e)
+    }
     return () => ws.close()
   }, [token, userId])
 
@@ -45,7 +78,11 @@ export default function Chat({ token, userId, onLogout }: { token?: string | nul
     if (!selectedUser) return
     const m: Message = { type: 'message', to: selectedUser, body: input }
     wsRef.current.send(JSON.stringify(m))
-    setMessages((prev) => [...prev, { ...m, from: userId }])
+    // optimistic UI: add message without id
+    const optimistic: Message = { ...m, from: userId }
+    const key = `msg:${optimistic.from}:${optimistic.to}:${optimistic.body}`
+    seenRef.current.add(key)
+    setMessages((prev) => [...prev, optimistic])
     setInput('')
   }
 
@@ -53,7 +90,14 @@ export default function Chat({ token, userId, onLogout }: { token?: string | nul
     <div className="p-6 h-screen grid grid-cols-4 gap-4">
       <div className="col-span-1 bg-white p-4 rounded shadow">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="font-bold">Users</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="font-bold">Users</h3>
+            <div className="text-xs">
+              {connectionStatus === 'connected' && <span className="text-green-600">● connected</span>}
+              {connectionStatus === 'connecting' && <span className="text-yellow-600">● connecting</span>}
+              {connectionStatus === 'disconnected' && <span className="text-red-600">● disconnected</span>}
+            </div>
+          </div>
           <button className="text-red-500 text-sm" onClick={onLogout}>Logout</button>
         </div>
         <div className="space-y-2">
