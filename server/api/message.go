@@ -4,6 +4,7 @@ import (
     "net/http"
     "strconv"
 
+    jwt "github.com/appleboy/gin-jwt/v2"
     "github.com/gin-gonic/gin"
 
     "chat/service"
@@ -11,21 +12,23 @@ import (
 
 // GetMessages godoc
 // @Summary Get chat messages between two users
-// @Param user_id query int true "Current user id"
 // @Param with query int true "Other user id"
 // @Param limit query int false "Limit"
 // @Success 200 {object} map[string]interface{}
 // @Router /messages [get]
 func GetMessages(c *gin.Context) {
-    userStr := c.Query("user_id")
-    withStr := c.Query("with")
-    if userStr == "" || withStr == "" {
-        c.JSON(http.StatusBadRequest, gin.H{"message": "user_id and with are required"})
+    // derive current user id from JWT claims
+    claims := jwt.ExtractClaims(c)
+    var uid int
+    if idf, ok := claims["id"].(float64); ok {
+        uid = int(idf)
+    } else {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized"})
         return
     }
-    uid, err := strconv.Atoi(userStr)
-    if err != nil || uid <= 0 {
-        c.JSON(http.StatusBadRequest, gin.H{"message": "invalid user_id"})
+    withStr := c.Query("with")
+    if withStr == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"message": "with is required"})
         return
     }
     wid, err := strconv.Atoi(withStr)

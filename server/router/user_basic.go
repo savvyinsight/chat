@@ -23,7 +23,6 @@ func Router() *gin.Engine {
 
 	r.GET("/index", api.GetIndex)
 	r.GET("/userList", api.GetUserList)
-	r.GET("/messages", api.GetMessages)
 	r.GET("/user/createUser", api.CreateUser)
 	r.GET("/ws", func(c *gin.Context) { ws.ServeWS(c.Writer, c.Request) })
 
@@ -35,6 +34,7 @@ func Router() *gin.Engine {
 	auth := r.Group("/")
 	auth.Use(authMiddleware.MiddlewareFunc())
 	auth.DELETE("/user/:id", api.DeleteUser)
+	auth.GET("/messages", api.GetMessages)
 	auth.PUT("/user/:id", api.UpdateUser)
 	auth.PATCH("/user/:id", api.PartialUpdateUser)
 
