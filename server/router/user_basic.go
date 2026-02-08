@@ -28,7 +28,8 @@ func Router() *gin.Engine {
 
 	// JWT middleware and auth routes
 	authMiddleware := middleware.JWTMiddleware()
-	r.POST("/user/login", authMiddleware.LoginHandler)
+	// use our API Login handler which returns token + user_id
+	r.POST("/user/login", api.Login)
 
 	// protected routes
 	auth := r.Group("/")

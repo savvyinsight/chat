@@ -7,6 +7,7 @@ import (
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
+	jwtv "github.com/golang-jwt/jwt/v4"
 
 	"chat/model"
 	"chat/service"
@@ -77,4 +78,17 @@ func getSecret() string {
 		return s
 	}
 	return "secret"
+}
+
+// GenerateTokenForUser creates a signed JWT for the given user using the same
+// identity key and secret as the middleware. The token expires in 1 hour.
+func GenerateTokenForUser(user *model.UserBasic) (string, error) {
+	if user == nil {
+		return "", nil
+	}
+	claims := jwtv.MapClaims{}
+	claims[identityKey] = user.ID
+	claims["exp"] = time.Now().Add(time.Hour).Unix()
+	token := jwtv.NewWithClaims(jwtv.SigningMethodHS256, claims)
+	return token.SignedString([]byte(getSecret()))
 }

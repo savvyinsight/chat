@@ -3,6 +3,7 @@ package api
 import (
 	"chat/global"
 	"chat/model"
+	"chat/middleware"
 	"chat/service"
 	"errors"
 	"net/http"
@@ -294,5 +295,12 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Login succeeded", "user_id": user.ID})
+	// generate JWT token for the authenticated user
+	token, terr := middleware.GenerateTokenForUser(user)
+	if terr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to generate token", "error": terr.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Login succeeded", "user_id": user.ID, "token": token})
 }
