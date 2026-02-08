@@ -23,6 +23,7 @@ func Router() *gin.Engine {
 
 	r.GET("/index", api.GetIndex)
 	r.GET("/userList", api.GetUserList)
+	r.GET("/messages", api.GetMessages)
 	r.GET("/user/createUser", api.CreateUser)
 	r.GET("/ws", func(c *gin.Context) { ws.ServeWS(c.Writer, c.Request) })
 

@@ -13,6 +13,16 @@ export default function Chat({ token, userId, onLogout }: { token?: string | nul
     api.get('/userList').then((b) => setUsers(b.data || [])).catch(() => setUsers([]))
   }, [])
 
+  // load history when selecting a user
+  useEffect(() => {
+    if (!selectedUser) return
+    if (!userId) return
+    api.get(`/messages?user_id=${userId}&with=${selectedUser}`).then((b) => {
+      const msgs = b.data || []
+      setMessages(msgs)
+    }).catch(() => {})
+  }, [selectedUser, userId])
+
   useEffect(() => {
     const ws = createSocket({ token: token || undefined, userId: userId })
     wsRef.current = ws

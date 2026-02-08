@@ -24,3 +24,14 @@ func AckMessage(messageID uint) error {
 	})
 	return result.Error
 }
+
+// GetMessagesBetween returns recent messages between two users (bidirectional).
+func GetMessagesBetween(userA, userB uint, limit int) ([]model.Message, error) {
+	var msgs []model.Message
+	if limit <= 0 {
+		limit = 100
+	}
+	err := global.GVA_DB.Where("(\"from\" = ? AND \"to\" = ?) OR (\"from\" = ? AND \"to\" = ?)", userA, userB, userB, userA).
+		Order("id asc").Limit(limit).Find(&msgs).Error
+	return msgs, err
+}
