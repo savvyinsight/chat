@@ -107,6 +107,53 @@ func CreateUser(c *gin.Context) {
 	})
 }
 
+// Register user (JSON)
+// @Summary Register
+// @Accept json
+// @Produce json
+// @Param request body map[string]string true "Register request {name, email, phone, password, repassword}"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Router /user/register [post]
+func Register(c *gin.Context) {
+	var req struct {
+		Name       string `json:"name"`
+		Email      string `json:"email"`
+		Phone      string `json:"phone"`
+		Password   string `json:"password"`
+		Repassword string `json:"repassword"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request", "error": err.Error()})
+		return
+	}
+
+	if req.Password != req.Repassword {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Password and repassword do not match"})
+		return
+	}
+
+	user := model.UserBasic{}
+	user.Name = req.Name
+	user.Email = req.Email
+	user.Phone = req.Phone
+	user.PassWord = req.Password
+
+	if err := service.CreateUser(&user); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Create User Failed!", "error": err.Error()})
+		return
+	}
+
+	// generate token for newly registered user
+	token, terr := middleware.GenerateTokenForUser(&user)
+	if terr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to generate token", "error": terr.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Register succeeded", "user_id": user.ID, "token": token})
+}
+
 // Delete User
 // @Summary      Delete User
 // @Tags         User

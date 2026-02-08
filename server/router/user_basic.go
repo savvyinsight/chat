@@ -23,7 +23,8 @@ func Router() *gin.Engine {
 
 	r.GET("/index", api.GetIndex)
 	r.GET("/userList", api.GetUserList)
-	r.GET("/user/createUser", api.CreateUser)
+	// legacy GET create route removed in favor of JSON POST register
+	r.POST("/user/register", api.Register)
 	r.GET("/ws", func(c *gin.Context) { ws.ServeWS(c.Writer, c.Request) })
 	// serve static files (avatars, frontend assets if embedded)
 	r.Static("/static", "web")
