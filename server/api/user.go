@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	jwt "github.com/appleboy/gin-jwt/v2"
 	"gorm.io/gorm"
 )
 
@@ -27,6 +28,24 @@ func GetUserList(c *gin.Context) {
 		"message": "User list retrieved successfully",
 		"data":    data,
 	})
+}
+
+// GetCurrentUser returns the profile of the currently authenticated user
+func GetCurrentUser(c *gin.Context) {
+	claims := jwt.ExtractClaims(c)
+	var uid uint
+	if idf, ok := claims["id"].(float64); ok {
+		uid = uint(idf)
+	} else {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized"})
+		return
+	}
+	var user model.UserBasic
+	if err := global.GVA_DB.First(&user, uid).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to load user", "error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": user})
 }
 
 // Create User

@@ -41,10 +41,13 @@ func InitMysql() {
 	global.GVA_DB, _ = gorm.Open(mysql.Open(viper.GetString("Mysql.dns")), &gorm.Config{
 		Logger: newLogger,
 	})
-	// global.GVA_DB.AutoMigrate(&model.Message{})
-	// user := model.UserBasic{}
-	// global.GVA_DB.Find(&user)
-	// fmt.Println(user)
+	// Auto-migrate core models (messages, users) to add fields like avatar_url
+	// Note: in production you should manage migrations explicitly.
+	// It's convenient here for development purposes.
+	// Import model package to ensure types are available to GORM.
+	// Avoid circular imports by referencing via full package path if needed.
+	// Uncommenting auto-migrate for development:
+	// global.GVA_DB.AutoMigrate(&model.Message{}, &model.UserBasic{})
 }
 
 func InitRedis() {

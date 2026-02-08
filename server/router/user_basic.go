@@ -25,6 +25,8 @@ func Router() *gin.Engine {
 	r.GET("/userList", api.GetUserList)
 	r.GET("/user/createUser", api.CreateUser)
 	r.GET("/ws", func(c *gin.Context) { ws.ServeWS(c.Writer, c.Request) })
+	// serve static files (avatars, frontend assets if embedded)
+	r.Static("/static", "web")
 
 	// JWT middleware and auth routes
 	authMiddleware := middleware.JWTMiddleware()
@@ -36,6 +38,8 @@ func Router() *gin.Engine {
 	auth.Use(authMiddleware.MiddlewareFunc())
 	auth.DELETE("/user/:id", api.DeleteUser)
 	auth.GET("/messages", api.GetMessages)
+	auth.POST("/user/avatar", api.UploadAvatar)
+	auth.GET("/user/me", api.GetCurrentUser)
 	auth.PUT("/user/:id", api.UpdateUser)
 	auth.PATCH("/user/:id", api.PartialUpdateUser)
 

@@ -13,6 +13,7 @@ import (
 type UserBasic struct {
 	gorm.Model
 	Name          string
+	AvatarURL     string
 	PassWord      string
 	Phone         string `gorm:"uniqueIndex" valid:"phone"`
 	Email         string `gorm:"uniqueIndex" valid:"email"`
