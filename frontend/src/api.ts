@@ -28,4 +28,8 @@ export async function apiPost(path: string, body: Body) {
   return request(path, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } })
 }
 
+export async function apiPut(path: string, body: Body) {
+  return request(path, { method: 'PUT', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } })
+}
+
 export default { get: apiGet, post: apiPost }
