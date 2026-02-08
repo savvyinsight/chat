@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { createSocket, Message } from '../ws'
+import api from '../api'
 
 export default function Chat({ token, userId, onLogout }: { token?: string | null; userId?: number; onLogout: () => void }) {
   const [users, setUsers] = useState<Array<any>>([])
@@ -9,7 +10,7 @@ export default function Chat({ token, userId, onLogout }: { token?: string | nul
   const wsRef = useRef<WebSocket | null>(null)
 
   useEffect(() => {
-    fetch('/userList').then((r) => r.json()).then((b) => setUsers(b.data || []))
+    api.get('/userList').then((b) => setUsers(b.data || [])).catch(() => setUsers([]))
   }, [])
 
   useEffect(() => {

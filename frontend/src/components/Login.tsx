@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import api from '../api'
 
 export default function Login({ onLogin }: { onLogin: (token?: string, userId?: string) => void }) {
   const [identifier, setIdentifier] = useState('')
@@ -9,33 +10,21 @@ export default function Login({ onLogin }: { onLogin: (token?: string, userId?: 
     e.preventDefault()
     setError(null)
     try {
-      const res = await fetch('/user/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier, password }),
-      })
-      const body = await res.json()
-      if (!res.ok) {
-        setError(body.message || 'Login failed')
-        return
-      }
-      // middleware may return { token } or a simple { user_id }
+      const body = await api.post('/user/login', { identifier, password })
+      // Accept either token (JWT) or user_id fallback
       const token = (body as any).token || (body as any).data?.token
       const userId = (body as any).user_id || (body as any).data?.user_id
       if (token) {
+        localStorage.setItem('token', token)
         onLogin(token, undefined)
       } else if (userId) {
+        localStorage.setItem('user_id', String(userId))
         onLogin(undefined, String(userId))
       } else {
-        // fallback: if middleware returns full payload under "code/message", try reading "user_id"
-        if ((body as any).user_id) {
-          onLogin(undefined, String((body as any).user_id))
-        } else {
-          setError('Unexpected login response')
-        }
+        setError('Unexpected login response')
       }
     } catch (err: any) {
-      setError(err.message || 'Network error')
+      setError(err?.body?.message || err?.body || err.message || 'Network error')
     }
   }
 
