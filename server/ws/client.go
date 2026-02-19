@@ -60,7 +60,10 @@ func (c *Client) ReadPump() {
 	}()
 	c.conn.SetReadLimit(512)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
-	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	c.conn.SetPongHandler(func(string) error { 
+		log.Printf("pong received from user %d", c.userID)
+		c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil 
+	})
 	for {
 		var msg Message
 		if err := c.conn.ReadJSON(&msg); err != nil {
@@ -120,8 +123,10 @@ func (c *Client) WritePump() {
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				log.Printf("ping failed for user %d: %v", c.userID, err)
 				return
 			}
+			log.Printf("ping sent to user %d", c.userID)
 		}
 	}
 }
