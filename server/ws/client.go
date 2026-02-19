@@ -60,9 +60,10 @@ func (c *Client) ReadPump() {
 	}()
 	c.conn.SetReadLimit(512)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
-	c.conn.SetPongHandler(func(string) error { 
+	c.conn.SetPongHandler(func(string) error {
 		log.Printf("pong received from user %d", c.userID)
-		c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil 
+		c.conn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
 	})
 	for {
 		var msg Message
