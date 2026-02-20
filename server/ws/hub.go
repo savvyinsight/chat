@@ -21,6 +21,9 @@ type Hub struct {
 	// Map userID -> set of clients
 	users map[uint]map[*Client]bool
 
+	// Map roomID -> set of clients
+	rooms map[string]map[*Client]bool
+
 	// Inbound messages from the clients.
 	broadcast chan *Message
 
@@ -42,6 +45,7 @@ func NewHub() *Hub {
 		unregister: make(chan *Client, 128),
 		clients:    make(map[*Client]bool),
 		users:      make(map[uint]map[*Client]bool),
+		rooms:      make(map[string]map[*Client]bool),
 		subs:       make(map[string]*RedisSub),
 	}
 }
@@ -82,7 +86,19 @@ func (h *Hub) Run() {
 		case m := <-h.broadcast:
 			// publish to redis so other instances receive
 			go h.publishToRedis(m)
-			if m.To != 0 {
+			if m.RoomID != "" {
+				// broadcast to room
+				if set, ok := h.rooms[m.RoomID]; ok {
+					for c := range set {
+						select {
+						case c.send <- m:
+						default:
+							close(c.send)
+							delete(h.clients, c)
+						}
+					}
+				}
+			} else if m.To != 0 {
 				// targeted to a user
 				deliveredLocal := false
 				if set, ok := h.users[m.To]; ok {
@@ -137,6 +153,28 @@ func (h *Hub) Run() {
 				}
 			}
 		}
+	}
+}
+
+func (h *Hub) joinRoom(roomID string, c *Client) {
+	if _, ok := h.rooms[roomID]; !ok {
+		h.rooms[roomID] = make(map[*Client]bool)
+		// ensure redis subscription for room channel
+		h.ensureSub(fmt.Sprintf("room:%s", roomID))
+	}
+	h.rooms[roomID][c] = true
+	log.Printf("client user=%d joined room=%s", c.userID, roomID)
+}
+
+func (h *Hub) leaveRoom(roomID string, c *Client) {
+	if set, ok := h.rooms[roomID]; ok {
+		delete(set, c)
+		if len(set) == 0 {
+			delete(h.rooms, roomID)
+			// remove redis subscription when no local clients
+			h.removeSub(fmt.Sprintf("room:%s", roomID))
+		}
+		log.Printf("client user=%d left room=%s", c.userID, roomID)
 	}
 }
 
@@ -200,6 +238,19 @@ func (h *Hub) ensureSub(channel string) {
 							}
 						}
 					}
+				} else if strings.HasPrefix(msg.Channel, "room:") {
+					// deliver to local room clients
+					roomID := strings.TrimPrefix(msg.Channel, "room:")
+					if set, ok := h.rooms[roomID]; ok {
+						for c := range set {
+							select {
+							case c.send <- &m:
+							default:
+								close(c.send)
+								delete(h.clients, c)
+							}
+						}
+					}
 				} else {
 					// deliver to local clients for target user
 					if m.To != 0 {
@@ -259,7 +310,9 @@ func (h *Hub) publishToRedis(m *Message) {
 		return
 	}
 	var channel string
-	if m.To != 0 {
+	if m.RoomID != "" {
+		channel = fmt.Sprintf("room:%s", m.RoomID)
+	} else if m.To != 0 {
 		channel = fmt.Sprintf("user:%d", m.To)
 	} else {
 		channel = "broadcast"

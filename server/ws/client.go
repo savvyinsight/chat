@@ -23,11 +23,12 @@ const (
 
 // Message represents a chat message.
 type Message struct {
-	Type string `json:"type"`
-	From uint   `json:"from"`
-	To   uint   `json:"to,omitempty"`
-	ID   uint   `json:"id,omitempty"`
-	Body string `json:"body"`
+	Type   string `json:"type"`
+	From   uint   `json:"from"`
+	To     uint   `json:"to,omitempty"`
+	RoomID string `json:"room_id,omitempty"`
+	ID     uint   `json:"id,omitempty"`
+	Body   string `json:"body"`
 }
 
 // Client is a middleman between the websocket connection and the hub.
@@ -76,6 +77,16 @@ func (c *Client) ReadPump() {
 		// set sender
 		msg.From = c.userID
 
+		// handle join/leave room messages
+		if msg.Type == "join" && msg.RoomID != "" {
+			c.hub.joinRoom(msg.RoomID, c)
+			continue
+		}
+		if msg.Type == "leave" && msg.RoomID != "" {
+			c.hub.leaveRoom(msg.RoomID, c)
+			continue
+		}
+
 		// handle ack messages
 		if msg.Type == "ack" && msg.ID != 0 {
 			// mark message delivered
@@ -89,6 +100,7 @@ func (c *Client) ReadPump() {
 		mm := &model.Message{
 			From: msg.From,
 			To:   msg.To,
+			Room: msg.RoomID,
 			Type: msg.Type,
 			Body: msg.Body,
 		}
